@@ -10,14 +10,14 @@ interface ISiteMetadataResult {
 }
 
 const data: ISiteMetadataResult = {
-  siteTitle: 'F4ria Running Page',
-  siteUrl: 'https://github.com/F4ria',
+  siteTitle: 'Fariacool Running Page',
+  siteUrl: 'https://github.com/Fariacool',
   logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTtc69JxHNcmN1ETpMUX4dozAgAN6iPjWalQ&usqp=CAU',
-  description: 'F4ria Running Page',
+  description: 'Fariacool Running Page',
   navLinks: [
     {
       name: 'About',
-      url: 'https://github.com/F4ria',
+      url: 'https://github.com/Fariacool',
     },
   ],
 };
