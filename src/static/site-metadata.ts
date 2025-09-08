@@ -16,7 +16,7 @@ const getBasePath = () => {
 
 const data: ISiteMetadataResult = {
   siteTitle: 'Fariacool Running Page',
-  siteUrl: 'https://github.com/Fariacool',
+  siteUrl: 'https://fariacool.github.io/',
   logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTtc69JxHNcmN1ETpMUX4dozAgAN6iPjWalQ&usqp=CAU',
   description: 'Fariacool Running Page',
   navLinks: [
