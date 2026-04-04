@@ -10,6 +10,7 @@ def save_synced_data_file_list(file_list: list):
         file_list.extend(old_list)
 
         json.dump(file_list, f, indent=2)
+        f.write("\n")
 
 
 def load_synced_file_list():
