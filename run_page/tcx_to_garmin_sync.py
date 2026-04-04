@@ -38,7 +38,9 @@ def get_to_generate_files(last_time):
 async def upload_tcx_files_to_garmin(options):
     print("Need to load all tcx files maybe take some time")
     garmin_auth_domain = "CN" if options.is_cn else ""
-    garmin_client = Garmin(options.secret_string, garmin_auth_domain)
+    api_url = options.api_url
+    api_token = options.api_token
+    garmin_client = Garmin(options.secret_string, garmin_auth_domain, api_url=api_url, api_token=api_token)
 
     last_time = 0
     if not options.all:
@@ -75,6 +77,16 @@ if __name__ == "__main__":
         dest="is_cn",
         action="store_true",
         help="if garmin account is cn",
+    )
+    parser.add_argument(
+        "--api-url",
+        dest="api_url",
+        help="Garmin auth API URL",
+    )
+    parser.add_argument(
+        "--api-token",
+        dest="api_token",
+        help="Bearer token for garmin auth API",
     )
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(upload_tcx_files_to_garmin(parser.parse_args()))

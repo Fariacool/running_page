@@ -28,12 +28,24 @@ if __name__ == "__main__":
         action="store_true",
         help="if is only for running",
     )
+    parser.add_argument(
+        "--api-url",
+        dest="api_url",
+        help="Garmin auth API URL",
+    )
+    parser.add_argument(
+        "--api-token",
+        dest="api_token",
+        help="Bearer token for garmin auth API",
+    )
 
     options = parser.parse_args()
     secret_string_cn = options.cn_secret_string
     secret_string_global = options.global_secret_string
     auth_domain = "CN"
     is_only_running = options.only_run
+    api_url = options.api_url
+    api_token = options.api_token
     if secret_string_cn is None or secret_string_global is None:
         print("Missing argument nor valid configuration file")
         sys.exit(1)
@@ -61,6 +73,8 @@ if __name__ == "__main__":
             is_only_running,
             folder,
             "fit",
+            api_url=api_url,
+            api_token=api_token,
         )
     )
     loop.run_until_complete(future)
@@ -81,6 +95,8 @@ if __name__ == "__main__":
         secret_string_global,
         "COM",
         is_only_running,
+        api_url=api_url,
+        api_token=api_token,
     )
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(

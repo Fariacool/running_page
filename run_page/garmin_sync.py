@@ -46,9 +46,29 @@ GARMIN_CN_URL_DICT = {
     "ACTIVITY_URL": "https://connectapi.garmin.cn/activity-service/activity/{activity_id}",
 }
 
+def _refresh_token_via_api(secret_string, api_url=None, api_token=None):
+    """Refresh OAuth2 token via external API (bypasses Cloudflare JS Challenge)."""
+    if not api_url or not api_token:
+        return None
+    response = httpx.post(
+        f"{api_url.rstrip('/')}/refresh",
+        json={"secret_string": secret_string},
+        headers={"Authorization": f"Bearer {api_token}"},
+        timeout=120.0,
+    )
+    if response.status_code != 200:
+        logger.warning(
+            f"Token refresh API failed: {response.status_code} {response.text}"
+        )
+        return None
+    return response.json()["secret_string"]
+
 
 class Garmin:
-    def __init__(self, secret_string, auth_domain, is_only_running=False):
+    def __init__(
+        self, secret_string, auth_domain, is_only_running=False,
+        api_url=None, api_token=None,
+    ):
         """
         Init module
         """
@@ -63,7 +83,12 @@ class Garmin:
         self.modern_url = self.URL_DICT.get("MODERN_URL")
         garth.client.loads(secret_string)
         if garth.client.oauth2_token.expired:
-            garth.client.refresh_oauth2()
+            # Try API refresh first, fall back to garth
+            new_secret = _refresh_token_via_api(secret_string, api_url, api_token)
+            if new_secret:
+                garth.client.loads(new_secret)
+            else:
+                garth.client.refresh_oauth2()
 
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36",
@@ -351,9 +376,10 @@ def get_garmin_summary_infos(activity_summary, activity_id):
 
 
 async def download_new_activities(
-    secret_string, auth_domain, downloaded_ids, is_only_running, folder, file_type
+    secret_string, auth_domain, downloaded_ids, is_only_running, folder, file_type,
+    api_url=None, api_token=None,
 ):
-    client = Garmin(secret_string, auth_domain, is_only_running)
+    client = Garmin(secret_string, auth_domain, is_only_running, api_url=api_url, api_token=api_token)
     # because I don't find a para for after time, so I use garmin-id as filename
     # to find new run to generate
     activity_ids = await get_activity_id_list(client)
@@ -423,11 +449,23 @@ if __name__ == "__main__":
         default="gpx",
         help="to download personal documents or ebook",
     )
+    parser.add_argument(
+        "--api-url",
+        dest="api_url",
+        help="Garmin auth API URL",
+    )
+    parser.add_argument(
+        "--api-token",
+        dest="api_token",
+        help="Bearer token for garmin auth API",
+    )
     options = parser.parse_args()
     secret_string = options.secret_string
     auth_domain = "CN" if options.is_cn else "COM"  # Default to COM if not specified
     file_type = options.download_file_type
     is_only_running = options.only_run
+    api_url = options.api_url
+    api_token = options.api_token
     if secret_string is None:
         print("Missing argument nor valid configuration file")
         sys.exit(1)
@@ -454,6 +492,8 @@ if __name__ == "__main__":
             is_only_running,
             folder,
             file_type,
+            api_url=api_url,
+            api_token=api_token,
         )
     )
     loop.run_until_complete(future)

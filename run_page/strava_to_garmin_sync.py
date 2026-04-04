@@ -64,6 +64,16 @@ if __name__ == "__main__":
         default=False,
         help="whether to use a faked Garmin device",
     )
+    parser.add_argument(
+        "--api-url",
+        dest="api_url",
+        help="Garmin auth API URL",
+    )
+    parser.add_argument(
+        "--api-token",
+        dest="api_token",
+        help="Bearer token for garmin auth API",
+    )
     options = parser.parse_args()
     strava_client = make_strava_client(
         options.strava_client_id,
@@ -83,9 +93,11 @@ if __name__ == "__main__":
         )
 
     garmin_auth_domain = "CN" if options.is_cn else ""
+    api_url = options.api_url
+    api_token = options.api_token
 
     try:
-        garmin_client = Garmin(options.secret_string, garmin_auth_domain)
+        garmin_client = Garmin(options.secret_string, garmin_auth_domain, api_url=api_url, api_token=api_token)
         loop = asyncio.get_event_loop()
         future = asyncio.ensure_future(
             upload_to_activities(

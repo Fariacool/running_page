@@ -36,6 +36,16 @@ if __name__ == "__main__":
         default="gpx",
         help="to download personal documents or ebook",
     )
+    parser.add_argument(
+        "--api-url",
+        dest="api_url",
+        help="Garmin auth API URL",
+    )
+    parser.add_argument(
+        "--api-token",
+        dest="api_token",
+        help="Bearer token for garmin auth API",
+    )
     options = parser.parse_args()
     strava_client = make_strava_client(
         options.strava_client_id,
@@ -47,6 +57,8 @@ if __name__ == "__main__":
     email = options.secret_string
     file_type = options.download_file_type
     is_only_running = False
+    api_url = options.api_url
+    api_token = options.api_token
     if secret_string is None:
         print("Missing argument nor valid configuration file")
         sys.exit(1)
@@ -62,6 +74,8 @@ if __name__ == "__main__":
             is_only_running,
             folder,
             file_type,
+            api_url=api_url,
+            api_token=api_token,
         )
     )
     loop.run_until_complete(future)
