@@ -40,7 +40,9 @@ async def upload_tcx_files_to_garmin(options):
     garmin_auth_domain = "CN" if options.is_cn else ""
     api_url = options.api_url
     api_token = options.api_token
-    garmin_client = Garmin(options.secret_string, garmin_auth_domain, api_url=api_url, api_token=api_token)
+    garmin_client = Garmin(
+        options.secret_string, garmin_auth_domain, api_url=api_url, api_token=api_token
+    )
 
     last_time = 0
     if not options.all:

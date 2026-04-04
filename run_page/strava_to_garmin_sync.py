@@ -97,7 +97,12 @@ if __name__ == "__main__":
     api_token = options.api_token
 
     try:
-        garmin_client = Garmin(options.secret_string, garmin_auth_domain, api_url=api_url, api_token=api_token)
+        garmin_client = Garmin(
+            options.secret_string,
+            garmin_auth_domain,
+            api_url=api_url,
+            api_token=api_token,
+        )
         loop = asyncio.get_event_loop()
         future = asyncio.ensure_future(
             upload_to_activities(

@@ -46,6 +46,7 @@ GARMIN_CN_URL_DICT = {
     "ACTIVITY_URL": "https://connectapi.garmin.cn/activity-service/activity/{activity_id}",
 }
 
+
 def _refresh_token_via_api(secret_string, api_url=None, api_token=None):
     """Refresh OAuth2 token via external API (bypasses Cloudflare JS Challenge)."""
     if not api_url or not api_token:
@@ -66,8 +67,12 @@ def _refresh_token_via_api(secret_string, api_url=None, api_token=None):
 
 class Garmin:
     def __init__(
-        self, secret_string, auth_domain, is_only_running=False,
-        api_url=None, api_token=None,
+        self,
+        secret_string,
+        auth_domain,
+        is_only_running=False,
+        api_url=None,
+        api_token=None,
     ):
         """
         Init module
@@ -376,10 +381,22 @@ def get_garmin_summary_infos(activity_summary, activity_id):
 
 
 async def download_new_activities(
-    secret_string, auth_domain, downloaded_ids, is_only_running, folder, file_type,
-    api_url=None, api_token=None,
+    secret_string,
+    auth_domain,
+    downloaded_ids,
+    is_only_running,
+    folder,
+    file_type,
+    api_url=None,
+    api_token=None,
 ):
-    client = Garmin(secret_string, auth_domain, is_only_running, api_url=api_url, api_token=api_token)
+    client = Garmin(
+        secret_string,
+        auth_domain,
+        is_only_running,
+        api_url=api_url,
+        api_token=api_token,
+    )
     # because I don't find a para for after time, so I use garmin-id as filename
     # to find new run to generate
     activity_ids = await get_activity_id_list(client)
