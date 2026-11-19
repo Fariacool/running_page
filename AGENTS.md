@@ -104,6 +104,7 @@ git checkout --theirs -- .github/workflows/run_data_sync.yml
 - `TITLE: Fariacool Running`
 - `USE_CLOUDFLARE_WARP: true`
 - `BIRTHDAY_MONTH: 1994-02`
+- `publish_github_pages` 调用 `gh-pages.yml` 时的 `secrets: inherit`（上游尚未修，必须保留）
 
 WARP 的 Install / Connect / Disconnect 三个 step 从 2026-11 起上游已经提供，确认它们仍在即可；fork 不需要再单独维护这三个 step。
 
@@ -124,8 +125,10 @@ ruby -ryaml -e 'YAML.load_file(ARGV[0])' .github/workflows/run_data_sync.yml
 git diff upstream/master -- .github/workflows/run_data_sync.yml
 ```
 
-理想的 diff 应该只有：cron、branch、几个 env 值。
+理想的 diff 应该只有：cron、branch、几个 env 值、`secrets: inherit`。
 如果还出现 WARP step 差异、大量引号/注释差异，说明没有清理干净，后续每次都会继续冲突。
+
+`src/components/RouteMapCanvas.tsx` 里忽略 404 glyph/tile 的补丁也是 fork-only 的，见 `FORK_CUSTOMIZATIONS.md`，同步后不要丢。
 
 ### 3.3 提交前检查
 
@@ -142,6 +145,8 @@ grep -n "Fariacool" src/static/site-metadata.ts
 grep -n "ROAD_LABEL_DISPLAY = false" src/themes/classic/utils/const.ts
 grep -n "PRIVACY_MODE = true" src/themes/classic/utils/const.ts
 grep -n "ref: run" .github/workflows/gh-pages.yml
+grep -n "secrets: inherit" .github/workflows/run_data_sync.yml
+grep -n "404|not found" src/components/RouteMapCanvas.tsx
 
 # 3. 确认 site-metadata 的导入仍然指向 fork 的文件
 git grep -n "site-metadata" -- src
@@ -222,6 +227,8 @@ gh run watch <run-id>
 
 数据同步会用你自己的数据库重新生成 `activities.json` 和 SVG，这是合并后的真正集成验证。
 如果它失败，站点仍会停留在上一次成功部署，不会立刻坏掉；修复后再推一次。
+
+dashboard 地图：如果 footer 显示“备用底图 · CARTO”或“底图加载失败”，先检查仓库 secret `MAPBOX_TOKEN` 和 `run_data_sync.yml` 的 `secrets: inherit`；细节见 `FORK_CUSTOMIZATIONS.md`。
 
 ## 4. 冲突决策表
 
