@@ -3,7 +3,7 @@
 本文件记录 `Fariacool/running_page` 相对上游 `yihong0618/running_page` 的**有意差异**。
 同步上游后，逐项核对本文件；如果发现新的差异，要么是上游重构导致的路径变化，要么是合并时被静默覆盖，必须查清楚。
 
-最后核对：2026-11-19，上游 `1730095e`。
+最后核对：2026-11-19，上游 `1730095e`。本次另有两个上游尚未修复的 fork-only 补丁，见第 2 节。
 
 ## 1. 数据所有权
 
@@ -39,10 +39,11 @@ assets/end.svg          # 静态地图标记
 
 | 文件 | fork 的差异 | 核对方式 |
 |---|---|---|
-| `.github/workflows/run_data_sync.yml` | cron、`run` 分支、Fariacool 的环境变量；WARP 三个 step 上游已提供，fork 只把开关设为 true | `git diff upstream/master -- .github/workflows/run_data_sync.yml` |
+| `.github/workflows/run_data_sync.yml` | cron、`run` 分支、Fariacool 的环境变量；WARP 三个 step 上游已提供，fork 只把开关设为 true；`publish_github_pages` 增加 `secrets: inherit`（上游尚未修） | `git diff upstream/master -- .github/workflows/run_data_sync.yml` |
 | `.github/workflows/gh-pages.yml` | `actions/checkout` 的 `ref: run` | `grep -n "ref: run" .github/workflows/gh-pages.yml` |
 | `src/static/site-metadata.ts` | 站点标题、URL、description、navLinks | `grep -n "Fariacool" src/static/site-metadata.ts` |
 | `src/themes/classic/utils/const.ts` | Mapbox token、`ROAD_LABEL_DISPLAY=false`、`PRIVACY_MODE=true` | `grep -n "ROAD_LABEL_DISPLAY = false\|PRIVACY_MODE = true" src/themes/classic/utils/const.ts` |
+| `src/components/RouteMapCanvas.tsx` | 忽略 404 glyph/tile，避免 CARTO 字体 404 把整张地图标记为失败（上游尚未修） | `grep -n "404|not found" src/components/RouteMapCanvas.tsx` |
 | `run_page/synced_data_file_logger.py` | `json.dump(..., indent=2)` 和结尾换行 | `grep -n "indent=2" run_page/synced_data_file_logger.py` |
 
 ### `run_data_sync.yml` 必须保留的 fork 设置
@@ -66,6 +67,18 @@ env:
 WARP 的三个 step（`Install` / `Connect` / `Disconnect`）从 2026-11 起上游已经提供；fork 只需要保留 `USE_CLOUDFLARE_WARP: true`，并确认这三个 step 没有被上游删除。如果上游以后移除它们，再把它们作为 fork 差异补回来。
 
 上游新增的同步步骤、Python 版本、参数修复要保留，不要因为解决冲突而丢掉。
+
+`publish_github_pages` 里的 `secrets: inherit` 是 fork-only 的修复：`Run Data Sync` 通过 reusable workflow 调用 `gh-pages.yml` 时，如果不继承 secrets，dashboard 的 `VITE_MAPBOX_TOKEN` 会是空值。上游目前还没修，所以同步后必须保留这一行。
+
+### Mapbox token（dashboard 3.0）
+
+- 仓库 secret `MAPBOX_TOKEN` 提供 `VITE_MAPBOX_TOKEN`。
+- `config.yml` 的 `mapbox_token` 保持为空，不要把 token 提交进仓库。
+- `run_data_sync.yml` 调用 `gh-pages.yml` 必须有 `secrets: inherit`，否则数据同步触发的 Pages 构建拿不到 token。
+- 验证方式：
+  - Pages 构建日志里 `VITE_MAPBOX_TOKEN: ***`（不是空）；
+  - 部署后的 `config-*.js` 里能搜到 `pk.`；
+  - 页面地图 footer 显示“底图 · Mapbox”，不是“备用底图 · CARTO”。
 
 ## 3. 上游重构注意事项
 
@@ -109,6 +122,8 @@ grep -n "Fariacool" src/static/site-metadata.ts
 grep -n "ROAD_LABEL_DISPLAY = false" src/themes/classic/utils/const.ts
 grep -n "PRIVACY_MODE = true" src/themes/classic/utils/const.ts
 grep -n "ref: run" .github/workflows/gh-pages.yml
+grep -n "secrets: inherit" .github/workflows/run_data_sync.yml
+grep -n "404|not found" src/components/RouteMapCanvas.tsx
 grep -n "indent=2" run_page/synced_data_file_logger.py
 
 # site-metadata 的导入仍然指向 fork 文件
