@@ -39,7 +39,7 @@ assets/end.svg          # 静态地图标记
 
 | 文件 | fork 的差异 | 核对方式 |
 |---|---|---|
-| `.github/workflows/run_data_sync.yml` | cron、`run` 分支、Fariacool 的环境变量、Cloudflare WARP 三个 step | `git diff upstream/master -- .github/workflows/run_data_sync.yml` |
+| `.github/workflows/run_data_sync.yml` | cron、`run` 分支、Fariacool 的环境变量；WARP 三个 step 上游已提供，fork 只把开关设为 true | `git diff upstream/master -- .github/workflows/run_data_sync.yml` |
 | `.github/workflows/gh-pages.yml` | `actions/checkout` 的 `ref: run` | `grep -n "ref: run" .github/workflows/gh-pages.yml` |
 | `src/static/site-metadata.ts` | 站点标题、URL、description、navLinks | `grep -n "Fariacool" src/static/site-metadata.ts` |
 | `src/themes/classic/utils/const.ts` | Mapbox token、`ROAD_LABEL_DISPLAY=false`、`PRIVACY_MODE=true` | `grep -n "ROAD_LABEL_DISPLAY = false\|PRIVACY_MODE = true" src/themes/classic/utils/const.ts` |
@@ -63,11 +63,7 @@ env:
   BIRTHDAY_MONTH: 1994-02
 ```
 
-以及三个 WARP step：
-
-- `Install Cloudflare WARP`
-- `Connect Cloudflare WARP`
-- `Disconnect Cloudflare WARP`
+WARP 的三个 step（`Install` / `Connect` / `Disconnect`）从 2026-11 起上游已经提供；fork 只需要保留 `USE_CLOUDFLARE_WARP: true`，并确认这三个 step 没有被上游删除。如果上游以后移除它们，再把它们作为 fork 差异补回来。
 
 上游新增的同步步骤、Python 版本、参数修复要保留，不要因为解决冲突而丢掉。
 

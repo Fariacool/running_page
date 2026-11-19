@@ -104,7 +104,8 @@ git checkout --theirs -- .github/workflows/run_data_sync.yml
 - `TITLE: Fariacool Running`
 - `USE_CLOUDFLARE_WARP: true`
 - `BIRTHDAY_MONTH: 1994-02`
-- Cloudflare WARP 的 Install / Connect / Disconnect 三个 step
+
+WARP 的 Install / Connect / Disconnect 三个 step 从 2026-11 起上游已经提供，确认它们仍在即可；fork 不需要再单独维护这三个 step。
 
 同时保留上游新增的内容。以 2026-11 这次为例，上游新增了：
 
@@ -123,8 +124,8 @@ ruby -ryaml -e 'YAML.load_file(ARGV[0])' .github/workflows/run_data_sync.yml
 git diff upstream/master -- .github/workflows/run_data_sync.yml
 ```
 
-理想的 diff 应该只有：cron、branch、几个 env 值、WARP 三个 step。
-如果还出现大量引号/注释差异，说明没有清理干净，后续每次都会继续冲突。
+理想的 diff 应该只有：cron、branch、几个 env 值。
+如果还出现 WARP step 差异、大量引号/注释差异，说明没有清理干净，后续每次都会继续冲突。
 
 ### 3.3 提交前检查
 

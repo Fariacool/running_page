@@ -47,13 +47,6 @@ DATA_PATHS=(
   'activities'
 )
 
-# git ls-tree does not accept the ":(glob)" magic; keep a plain-pathspec copy
-# for restoring files from the base commit.
-DATA_LS_PATHS=()
-for path in "${DATA_PATHS[@]}"; do
-  DATA_LS_PATHS+=("${path#:(glob)}")
-done
-
 BRANCH=""
 DO_FETCH=1
 RESOLVE_ONLY=0
@@ -245,11 +238,31 @@ fi
 echo "Enforcing fork ownership for data paths..."
 git rm -r -f -q --ignore-unmatch -- "${DATA_PATHS[@]}"
 
-# Restore every data file that exists in the base commit. Building the list
-# from git avoids pathspec errors when an optional pattern is absent.
-if [ "$(git ls-tree -r -z --name-only "$BASE" -- "${DATA_LS_PATHS[@]}" | wc -c)" -gt 0 ]; then
-  git ls-tree -r -z --name-only "$BASE" -- "${DATA_LS_PATHS[@]}" \
-    | xargs -0 git checkout "$BASE" --
+# Restore every data file that exists in the base commit.
+# git ls-tree does not expand wildcards, so list assets/ and select the
+# generated files with shell patterns. This also keeps index.tsx, start.svg
+# and end.svg out of the data set.
+RESTORE_PATHS=()
+
+while IFS= read -r -d '' file; do
+  RESTORE_PATHS+=("$file")
+done < <(git ls-tree -r -z --name-only "$BASE" -- \
+  src/static/activities.json imported.json synced_activity.json run_page/data.db \
+  FIT_OUT GPX_OUT TCX_OUT Workouts activities)
+
+while IFS= read -r -d '' file; do
+  case "$file" in
+    assets/github.svg|assets/grid.svg)
+      RESTORE_PATHS+=("$file")
+      ;;
+    assets/github_[0-9]*.svg|assets/mol*.svg|assets/year_[0-9]*.svg|assets/year_summary*.svg)
+      RESTORE_PATHS+=("$file")
+      ;;
+  esac
+done < <(git ls-tree -r -z --name-only "$BASE" -- assets)
+
+if [ "${#RESTORE_PATHS[@]}" -gt 0 ]; then
+  printf '%s\0' "${RESTORE_PATHS[@]}" | xargs -0 git checkout "$BASE" --
 fi
 
 # The data area must be byte-for-byte identical to the fork's base commit.
