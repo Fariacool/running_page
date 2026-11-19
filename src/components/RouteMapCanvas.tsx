@@ -203,22 +203,22 @@ export function RouteMapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    let failed = false;
+
+    setStatus('loading');
+
     const onError = (event: mapboxgl.ErrorEvent) => {
       const code = (event.error as Error & { status?: number }).status;
+      // The only actionable map error is an invalid/unauthorized Mapbox
+      // token. Tile, glyph, and telemetry failures are per-resource and
+      // must not mark the whole basemap as failed.
       if (provider === 'mapbox' && (code === 401 || code === 403)) {
         setProvider('carto');
-      } else {
-        failed = true;
-        setStatus('error');
       }
     };
-    const onIdle = () => {
-      if (!failed) setStatus('ready');
-    };
+
     const onLoading = () => setStatus('loading');
+
     map.on('error', onError);
-    map.on('idle', onIdle);
     map.once('styledataloading', onLoading);
     styleReadyRef.current = false;
     map.setStyle(style, {
@@ -226,13 +226,16 @@ export function RouteMapCanvas({
       localFontFamily: undefined,
       localIdeographFontFamily: 'sans-serif',
     });
+
     const timer = window.setTimeout(() => {
-      if (!map.isStyleLoaded()) setStatus('error');
+      // style.load normally marks the map ready. This timeout is only a
+      // fallback for a style that never loads at all.
+      setStatus(map.isStyleLoaded() ? 'ready' : 'error');
     }, 15000);
+
     return () => {
       window.clearTimeout(timer);
       map.off('error', onError);
-      map.off('idle', onIdle);
       map.off('styledataloading', onLoading);
     };
   }, [style, provider, retry, zh]);
@@ -242,6 +245,7 @@ export function RouteMapCanvas({
     if (!map) return;
     const onStyleLoad = () => {
       styleReadyRef.current = true;
+      setStatus('ready');
       drawRoutes();
     };
     map.on('style.load', onStyleLoad);
