@@ -43,7 +43,7 @@ assets/end.svg          # 静态地图标记
 | `.github/workflows/gh-pages.yml` | `actions/checkout` 的 `ref: run`；`workflow_call` 声明可选 secret `MAPBOX_TOKEN`（上游尚未修） | `grep -n "ref: run" .github/workflows/gh-pages.yml` |
 | `src/static/site-metadata.ts` | 站点标题、URL、description、navLinks | `grep -n "Fariacool" src/static/site-metadata.ts` |
 | `src/themes/classic/utils/const.ts` | Mapbox token、`ROAD_LABEL_DISPLAY=false`、`PRIVACY_MODE=true` | `grep -n "ROAD_LABEL_DISPLAY = false\|PRIVACY_MODE = true" src/themes/classic/utils/const.ts` |
-| `src/components/RouteMapCanvas.tsx` | 忽略 404 glyph/tile，避免 CARTO 字体 404 把整张地图标记为失败（上游尚未修） | `grep -n "404|not found" src/components/RouteMapCanvas.tsx` |
+| `src/components/RouteMapCanvas.tsx` | 只处理 Mapbox 401/403 fallback；`style.load` 即 ready；其它 tile/glyph/abort 不改变整张地图状态（上游尚未修） | `grep -n "setStatus('ready')" src/components/RouteMapCanvas.tsx` |
 | `run_page/synced_data_file_logger.py` | `json.dump(..., indent=2)` 和结尾换行 | `grep -n "indent=2" run_page/synced_data_file_logger.py` |
 
 ### `run_data_sync.yml` 必须保留的 fork 设置
@@ -83,8 +83,9 @@ WARP 的三个 step（`Install` / `Connect` / `Disconnect`）从 2026-11 起上�
 - 不要使用 `secrets: inherit`；只传 `MAPBOX_TOKEN`，避免把 Garmin/Strava/Keep 等 secrets 一起传过去。
 - 验证方式：
   - Pages 构建日志里 `VITE_MAPBOX_TOKEN: ***`（不是空）；
-  - 部署后的 `config-*.js` 里能搜到 `pk.`；
+  - 部署后的 `config-*.js` 里能搜到 `pk.`（`mapbox_token` 字段本身仍然是空的，这是设计如此）；
   - 页面地图 footer 显示“底图 · Mapbox”，不是“备用底图 · CARTO”。
+- Vercel preview 不读取 GitHub Actions secret。如果 Vercel 的 Preview 环境没有设置 `VITE_MAPBOX_TOKEN`，预览站会使用 CARTO，这是预期行为；要在预览站用 Mapbox，需要单独配置一个允许 preview 域名的 token。
 
 ## 3. 上游重构注意事项
 
@@ -131,7 +132,7 @@ grep -n "ref: run" .github/workflows/gh-pages.yml
 grep -n 'MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}' .github/workflows/run_data_sync.yml
 ! grep -q "secrets: inherit" .github/workflows/run_data_sync.yml
 grep -n "MAPBOX_TOKEN" .github/workflows/gh-pages.yml
-grep -n "404|not found" src/components/RouteMapCanvas.tsx
+grep -n "setStatus('ready')" src/components/RouteMapCanvas.tsx
 grep -n "indent=2" run_page/synced_data_file_logger.py
 
 # site-metadata 的导入仍然指向 fork 文件
