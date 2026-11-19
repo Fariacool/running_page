@@ -104,7 +104,12 @@ git checkout --theirs -- .github/workflows/run_data_sync.yml
 - `TITLE: Fariacool Running`
 - `USE_CLOUDFLARE_WARP: true`
 - `BIRTHDAY_MONTH: 1994-02`
-- `publish_github_pages` 调用 `gh-pages.yml` 时的 `secrets: inherit`（上游尚未修，必须保留）
+- `publish_github_pages` 调用 `gh-pages.yml` 时只传 `MAPBOX_TOKEN`（上游尚未修，必须保留；不要用 `secrets: inherit`）
+
+```yaml
+    secrets:
+      MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+```
 
 WARP 的 Install / Connect / Disconnect 三个 step 从 2026-11 起上游已经提供，确认它们仍在即可；fork 不需要再单独维护这三个 step。
 
@@ -125,7 +130,7 @@ ruby -ryaml -e 'YAML.load_file(ARGV[0])' .github/workflows/run_data_sync.yml
 git diff upstream/master -- .github/workflows/run_data_sync.yml
 ```
 
-理想的 diff 应该只有：cron、branch、几个 env 值、`secrets: inherit`。
+理想的 diff 应该只有：cron、branch、几个 env 值、显式 `MAPBOX_TOKEN` 传递。
 如果还出现 WARP step 差异、大量引号/注释差异，说明没有清理干净，后续每次都会继续冲突。
 
 `src/components/RouteMapCanvas.tsx` 里忽略 404 glyph/tile 的补丁也是 fork-only 的，见 `FORK_CUSTOMIZATIONS.md`，同步后不要丢。
@@ -145,7 +150,8 @@ grep -n "Fariacool" src/static/site-metadata.ts
 grep -n "ROAD_LABEL_DISPLAY = false" src/themes/classic/utils/const.ts
 grep -n "PRIVACY_MODE = true" src/themes/classic/utils/const.ts
 grep -n "ref: run" .github/workflows/gh-pages.yml
-grep -n "secrets: inherit" .github/workflows/run_data_sync.yml
+grep -n 'MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}' .github/workflows/run_data_sync.yml
+! grep -q "secrets: inherit" .github/workflows/run_data_sync.yml
 grep -n "404|not found" src/components/RouteMapCanvas.tsx
 
 # 3. 确认 site-metadata 的导入仍然指向 fork 的文件
@@ -228,7 +234,7 @@ gh run watch <run-id>
 数据同步会用你自己的数据库重新生成 `activities.json` 和 SVG，这是合并后的真正集成验证。
 如果它失败，站点仍会停留在上一次成功部署，不会立刻坏掉；修复后再推一次。
 
-dashboard 地图：如果 footer 显示“备用底图 · CARTO”或“底图加载失败”，先检查仓库 secret `MAPBOX_TOKEN` 和 `run_data_sync.yml` 的 `secrets: inherit`；细节见 `FORK_CUSTOMIZATIONS.md`。
+dashboard 地图：如果 footer 显示“备用底图 · CARTO”或“底图加载失败”，先检查仓库 secret `MAPBOX_TOKEN` 和 `run_data_sync.yml` 里的显式 `MAPBOX_TOKEN` 传递；细节见 `FORK_CUSTOMIZATIONS.md`。
 
 ## 4. 冲突决策表
 
@@ -283,6 +289,7 @@ gh pr create --base run
 - 不要用 `.gitattributes merge=ours`：需要每台机器配置，而且处理不了 modify/delete、add/add。
 - 不要逐文件 `git checkout --ours -- assets/...`：文件列表每年都会变，容易漏。
 - 不要直接 push `run`，也不要 squash merge。
+- 不要用 `secrets: inherit` 把全部 repository secrets 传给 Pages workflow；只显式传 `MAPBOX_TOKEN`。
 - 不要 `git clean -fdx`。
 - 不要在本地 `pnpm install` / `pip install` 来「先跑一下」；CI 是唯一验收环境。
 - 不要把上游的新 `assets/*.svg` 当成静态资源直接接收；先确认它是不是数据产物。
