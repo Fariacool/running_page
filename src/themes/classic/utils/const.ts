@@ -3,7 +3,7 @@ const MAPBOX_TOKEN =
   // For security reasons, please avoid using the default public token provided by Mapbox as much as possible.
   // Instead, manually add a new token and apply URL restrictions.
   // (please refer to https://github.com/yihong0618/running_page/issues/643#issuecomment-2042668580)
-  'pk.eyJ1IjoieWlob25nMDYxOCIsImEiOiJjbWYxdXR4YncwMTJtMm5zOTE4eTZpMGdtIn0.OnsXdwkZFztR8a5Ph_T-xg';
+  'pk.eyJ1IjoidHJ5c3UiLCJhIjoiY21mYXl5NTV1MGl5bzJtcG9lMTMzenF3MCJ9.5q4S67qtkp8LV2AZfkD4ag';
 const MUNICIPALITY_CITIES_ARR = [
   '北京市',
   '上海市',
@@ -35,11 +35,10 @@ const LINE_OPACITY = 0.4;
 // Use smaller height on mobile devices for better user experience
 const MAP_HEIGHT = window.innerWidth <= 768 ? 250 : 600;
 //set to `false` if you want to hide the road label characters
-const ROAD_LABEL_DISPLAY = true;
-// updated on 2024/11/17: privacy mode is set to true by default
+const ROAD_LABEL_DISPLAY = false;
 //set to `true` if you want to display only the routes without showing the map.
-const PRIVACY_MODE = false;
-// updated on 2024/11/17: lights are turned off by default
+const PRIVACY_MODE = true;
+// update for now 2024/11/17 the lights on default is false
 //set to `false` if you want to make light off as default, only effect when `PRIVACY_MODE` = false
 const LIGHTS_ON = false;
 //set to `true` if you want to show the 'Elevation Gain' column

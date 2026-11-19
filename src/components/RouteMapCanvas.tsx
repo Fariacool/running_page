@@ -205,13 +205,21 @@ export function RouteMapCanvas({
     if (!map) return;
     let failed = false;
     const onError = (event: mapboxgl.ErrorEvent) => {
-      const code = (event.error as Error & { status?: number }).status;
+      const error = event.error as Error & { status?: number };
+      const code = error.status;
+      const message = error.message ?? '';
       if (provider === 'mapbox' && (code === 401 || code === 403)) {
         setProvider('carto');
-      } else {
-        failed = true;
-        setStatus('error');
+        return;
       }
+      // Missing glyphs/tiles are common (especially on the CARTO fallback)
+      // and must not mark the whole map as failed. Style-load failures are
+      // still caught by the timeout below.
+      if (code === 404 || /404|not found/i.test(message)) {
+        return;
+      }
+      failed = true;
+      setStatus('error');
     };
     const onIdle = () => {
       if (!failed) setStatus('ready');
