@@ -133,7 +133,7 @@ git diff upstream/master -- .github/workflows/run_data_sync.yml
 理想的 diff 应该只有：cron、branch、几个 env 值、显式 `MAPBOX_TOKEN` 传递。
 如果还出现 WARP step 差异、大量引号/注释差异，说明没有清理干净，后续每次都会继续冲突。
 
-`src/components/RouteMapCanvas.tsx` 里忽略 404 glyph/tile 的补丁也是 fork-only 的，见 `FORK_CUSTOMIZATIONS.md`，同步后不要丢。
+`src/components/RouteMapCanvas.tsx` 里“只处理 Mapbox 401/403 fallback、style.load 即 ready”的补丁也是 fork-only 的，见 `FORK_CUSTOMIZATIONS.md`，同步后不要丢。
 
 ### 3.3 提交前检查
 
@@ -152,7 +152,7 @@ grep -n "PRIVACY_MODE = true" src/themes/classic/utils/const.ts
 grep -n "ref: run" .github/workflows/gh-pages.yml
 grep -n 'MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}' .github/workflows/run_data_sync.yml
 ! grep -q "secrets: inherit" .github/workflows/run_data_sync.yml
-grep -n "404|not found" src/components/RouteMapCanvas.tsx
+grep -n "setStatus('ready')" src/components/RouteMapCanvas.tsx
 
 # 3. 确认 site-metadata 的导入仍然指向 fork 的文件
 git grep -n "site-metadata" -- src
