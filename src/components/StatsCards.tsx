@@ -2,7 +2,16 @@ import { memo, useState } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { formatDistance, parseMovingTime } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
-import { GOALS, DEFAULT_GOAL } from '../config';
+import { GOALS, DEFAULT_GOAL, WEEK_STARTS_ON } from '../config';
+import {
+  addDays,
+  addWeeks,
+  currentWeekStreak,
+  localTodayKey,
+  longestWeekStreak,
+  rotateWeekdays,
+  weekKey,
+} from '../utils/week';
 
 interface StatsCardsProps {
   activities: Activity[];
@@ -113,14 +122,13 @@ export const StatsCards = memo(function StatsCards({
       ? monthSeconds - lastMonthSeconds
       : monthDistance - lastMonthDistance;
 
-  // Current week stats — week starts on Monday
-  const dayOfWeek = now.getDay(); // 0=Sun
-  const daysSinceMon = (dayOfWeek + 6) % 7; // Mon=0 … Sun=6
-  const weekStart = new Date(now.getTime() - daysSinceMon * 86400000);
-  weekStart.setHours(0, 0, 0, 0);
+  // Current week stats — the week starts on the configured weekday.
+  const today = localTodayKey(now);
+  const currentWeekStart = weekKey(today, WEEK_STARTS_ON);
+  const nextWeekStart = addWeeks(currentWeekStart, 1);
   const weekActivities = allActivities.filter((a) => {
-    const d = new Date(a.start_date_local);
-    if (d < weekStart) return false;
+    const date = a.start_date_local.slice(0, 10);
+    if (date < currentWeekStart || date >= nextWeekStart) return false;
     if (filter !== 'all' && a.type !== filter) return false;
     return true;
   });
@@ -132,11 +140,11 @@ export const StatsCards = memo(function StatsCards({
   );
 
   // Last week same period comparison
-  const lastWeekStart = new Date(weekStart.getTime() - 7 * 86400000);
-  const lastWeekSamePoint = new Date(now.getTime() - 7 * 86400000);
+  const lastWeekStart = addWeeks(currentWeekStart, -1);
+  const lastWeekSamePoint = addDays(today, -7);
   const lastWeekActivities = allActivities.filter((a) => {
-    const d = new Date(a.start_date_local);
-    if (d < lastWeekStart || d > lastWeekSamePoint) return false;
+    const date = a.start_date_local.slice(0, 10);
+    if (date < lastWeekStart || date > lastWeekSamePoint) return false;
     if (filter !== 'all' && a.type !== filter) return false;
     return true;
   });
@@ -153,11 +161,6 @@ export const StatsCards = memo(function StatsCards({
       ? weekSeconds - lastWeekSeconds
       : weekDistance - lastWeekDistance;
 
-  // Use local date string to avoid UTC offset issues
-  function toLocalDateStr(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
   // Streak calculation (consecutive days with activity)
   const sortedDates = [
     ...new Set(activities.map((a) => a.start_date_local.slice(0, 10))),
@@ -167,16 +170,13 @@ export const StatsCards = memo(function StatsCards({
 
   let currentStreak = 0;
   if (sortedDates.length > 0) {
-    const today = toLocalDateStr(now);
-    const yesterday = toLocalDateStr(new Date(now.getTime() - 86400000));
+    const yesterday = addDays(today, -1);
     if (sortedDates[0] === today || sortedDates[0] === yesterday) {
       let expected = sortedDates[0];
       for (const dateStr of sortedDates) {
         if (dateStr === expected) {
           currentStreak++;
-          const prev = new Date(expected + 'T12:00:00');
-          prev.setDate(prev.getDate() - 1);
-          expected = toLocalDateStr(prev);
+          expected = addDays(expected, -1);
         } else {
           break;
         }
@@ -184,68 +184,27 @@ export const StatsCards = memo(function StatsCards({
     }
   }
 
-  // Week streak (consecutive weeks with activity) using simple week number
-  function getWeekNumber(d: Date): number {
-    const start = new Date(d.getFullYear(), 0, 1);
-    return Math.floor(
-      ((d.getTime() - start.getTime()) / 86400000 + start.getDay()) / 7
-    );
-  }
-
-  const weekSet = new Set(
-    activities.map((a) => {
-      const d = new Date(a.start_date_local);
-      return `${d.getFullYear()}-${getWeekNumber(d)}`;
-    })
+  // Week streak (consecutive calendar weeks with activity). Week keys are
+  // derived from the recorded local date, so the all-time longest streak does
+  // not depend on the viewer's timezone.
+  const activityDates = activities.map((a) => a.start_date_local);
+  const currentWeekStreakCount = currentWeekStreak(
+    activityDates,
+    WEEK_STARTS_ON,
+    today
+  );
+  const longestWeekStreakCount = longestWeekStreak(
+    activityDates,
+    WEEK_STARTS_ON
   );
 
-  let currentWeekStreak = 0;
-  {
-    let d = new Date(now);
-    // Check current week first
-    const currKey = `${d.getFullYear()}-${getWeekNumber(d)}`;
-    if (weekSet.has(currKey)) {
-      // Count backwards from current week
-      const seen = new Set<string>();
-      while (true) {
-        const key = `${d.getFullYear()}-${getWeekNumber(d)}`;
-        if (weekSet.has(key) && !seen.has(key)) {
-          seen.add(key);
-          currentWeekStreak++;
-          d = new Date(d.getTime() - 7 * 86400000);
-        } else {
-          break;
-        }
-      }
-    } else {
-      // Try last week
-      d = new Date(now.getTime() - 7 * 86400000);
-      if (weekSet.has(`${d.getFullYear()}-${getWeekNumber(d)}`)) {
-        const seen = new Set<string>();
-        while (true) {
-          const key = `${d.getFullYear()}-${getWeekNumber(d)}`;
-          if (weekSet.has(key) && !seen.has(key)) {
-            seen.add(key);
-            currentWeekStreak++;
-            d = new Date(d.getTime() - 7 * 86400000);
-          } else {
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  // Longest streak ever
+  // Longest streak ever (date keys avoid DST/timezone arithmetic)
   let longestStreak = 0;
   if (sortedDates.length > 0) {
     const ascending = [...sortedDates].reverse();
     let streak = 1;
     for (let i = 1; i < ascending.length; i++) {
-      const prev = new Date(ascending[i - 1] + 'T00:00:00');
-      const curr = new Date(ascending[i] + 'T00:00:00');
-      const diff = (curr.getTime() - prev.getTime()) / 86400000;
-      if (diff === 1) {
+      if (addDays(ascending[i - 1], 1) === ascending[i]) {
         streak++;
       } else {
         longestStreak = Math.max(longestStreak, streak);
@@ -255,36 +214,6 @@ export const StatsCards = memo(function StatsCards({
     longestStreak = Math.max(longestStreak, streak);
   }
 
-  // Longest week streak - iterate all weeks from earliest to latest
-  let longestWeekStreak = 0;
-  {
-    // Get all activity dates, find range, check each week
-    if (activities.length > 0) {
-      const earliest = new Date(
-        Math.min(
-          ...activities.map((a) => new Date(a.start_date_local).getTime())
-        )
-      );
-      const latest = new Date(
-        Math.max(
-          ...activities.map((a) => new Date(a.start_date_local).getTime())
-        )
-      );
-      let streak = 0;
-      let d = new Date(earliest);
-      while (d <= latest) {
-        const key = `${d.getFullYear()}-${getWeekNumber(d)}`;
-        if (weekSet.has(key)) {
-          streak++;
-          longestWeekStreak = Math.max(longestWeekStreak, streak);
-        } else {
-          streak = 0;
-        }
-        d = new Date(d.getTime() + 7 * 86400000);
-      }
-    }
-  }
-
   const formatHours = (secs: number) => {
     const h = (secs / 3600).toFixed(1);
     return `${h}h`;
@@ -292,12 +221,12 @@ export const StatsCards = memo(function StatsCards({
 
   const unit = filter === 'Run' ? t('runs') : t('activities');
 
-  const todayIdx = (now.getDay() + 6) % 7; // Mon=0 … Sun=6
-  const visualWeekStart = new Date(now.getTime() - todayIdx * 86400000);
-  const weekLabels =
+  const weekLabels = rotateWeekdays(
     locale === 'zh'
-      ? ['一', '二', '三', '四', '五', '六', '日']
-      : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+      ? ['日', '一', '二', '三', '四', '五', '六']
+      : ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+    WEEK_STARTS_ON
+  );
 
   function dayColor(acts: Activity[]): string {
     if (acts.length === 0) return '';
@@ -308,16 +237,15 @@ export const StatsCards = memo(function StatsCards({
   }
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(visualWeekStart.getTime() + i * 86400000);
-    const key = toLocalDateStr(date);
+    const key = addDays(currentWeekStart, i);
     const dayActs = activities.filter(
       (a) => a.start_date_local.slice(0, 10) === key
     );
     return {
       key,
-      day: date.getDate(),
+      day: Number(key.slice(8, 10)),
       hasActivity: dayActs.length > 0,
-      isToday: i === todayIdx,
+      isToday: key === today,
       acts: dayActs,
     };
   });
@@ -567,7 +495,7 @@ export const StatsCards = memo(function StatsCards({
                 <path d="M12 23c-3.866 0-7-3.134-7-7 0-2.468 1.5-5.093 3.03-6.97.44-.54 1.47-.36 1.64.3.17.66.54 1.44 1.13 2.07.26-.94.76-2.06 1.57-3.04.81-.98 1.49-2.09 1.78-3.36.12-.53.71-.78 1.15-.46C17.09 6.46 19 9.58 19 13.5c0 5.247-3.134 9.5-7 9.5z" />
               </svg>
               <span className="absolute right-0 bottom-[18%] left-0 flex items-center justify-center text-[9px] leading-none font-bold text-white">
-                {currentWeekStreak}
+                {currentWeekStreakCount}
               </span>
             </div>
             <span className="-mt-0.5 text-[11px] font-medium text-[var(--color-muted)]">
@@ -576,8 +504,7 @@ export const StatsCards = memo(function StatsCards({
           </div>
           <div className="flex flex-1 items-center gap-1.5">
             {weekDays.map((wd, i) => {
-              const isPast =
-                new Date(visualWeekStart.getTime() + i * 86400000) <= now;
+              const isPast = wd.key <= today;
               const color = dayColor(wd.acts);
               return (
                 <div
@@ -640,7 +567,7 @@ export const StatsCards = memo(function StatsCards({
               d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
             />
           </svg>
-          {t('longest')}: {longestStreak} {t('days')} / {longestWeekStreak}{' '}
+          {t('longest')}: {longestStreak} {t('days')} / {longestWeekStreakCount}{' '}
           {t('weeks')}
         </div>
       </div>

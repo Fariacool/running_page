@@ -1,21 +1,20 @@
 import type { Activity } from '../types';
 import { parseMovingTime } from '../hooks/useActivities';
+import { weekKey, type WeekStart } from './week';
 
 export type SummaryPeriod = 'year' | 'month' | 'week' | 'day' | 'life';
 
 // Use the recorded local calendar date, independent of the viewer's timezone.
-export function summaryKey(date: string, period: SummaryPeriod): string {
+export function summaryKey(
+  date: string,
+  period: SummaryPeriod,
+  weekStartsOn: WeekStart = 1
+): string {
   if (period === 'life') return 'Life';
   if (period === 'year') return date.slice(0, 4);
   if (period === 'month') return date.slice(0, 7);
   if (period === 'day') return date.slice(0, 10);
-  const day = new Date(`${date.slice(0, 10)}T00:00:00Z`);
-  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
-  const year = day.getUTCFullYear();
-  const week = Math.ceil(
-    ((day.getTime() - Date.UTC(year, 0, 1)) / 86400000 + 1) / 7
-  );
-  return `${year}-W${String(week).padStart(2, '0')}`;
+  return weekKey(date, weekStartsOn);
 }
 
 export function summarize(activities: Activity[]) {
@@ -44,10 +43,14 @@ export function summarize(activities: Activity[]) {
   };
 }
 
-export function groupSummary(activities: Activity[], period: SummaryPeriod) {
+export function groupSummary(
+  activities: Activity[],
+  period: SummaryPeriod,
+  weekStartsOn: WeekStart = 1
+) {
   const groups = new Map<string, Activity[]>();
   for (const activity of activities) {
-    const key = summaryKey(activity.start_date_local, period);
+    const key = summaryKey(activity.start_date_local, period, weekStartsOn);
     const group = groups.get(key) ?? [];
     group.push(activity);
     groups.set(key, group);
@@ -58,7 +61,8 @@ export function groupSummary(activities: Activity[], period: SummaryPeriod) {
 export function summaryChart(
   activities: Activity[],
   period: SummaryPeriod,
-  key: string
+  key: string,
+  weekStartsOn: WeekStart = 1
 ) {
   const buckets = new Map<string, number>();
   const bucketFor = (a: Activity) => {
@@ -67,7 +71,9 @@ export function summaryChart(
     if (period === 'year') return date.slice(5, 7);
     if (period === 'month') return date.slice(8, 10);
     if (period === 'week')
-      return String(((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7) + 1);
+      return String(
+        ((new Date(`${date}T00:00:00Z`).getUTCDay() - weekStartsOn + 7) % 7) + 1
+      );
     return a.start_date_local.slice(11, 16);
   };
   let length = 0;

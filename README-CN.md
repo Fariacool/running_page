@@ -401,6 +401,7 @@ avatar: 'https://...'              # 头像 URL
 locale: zh                         # zh | en
 theme: dark                        # system | light | dark
 theme_preset: dashboard            # dashboard | classic | 自定义
+week_starts_on: monday             # monday | sunday | saturday | ...
 
 goals:
   Run:
@@ -409,6 +410,8 @@ goals:
     weekly: 35                     # 周度目标 (km)
     unit: distance                 # distance (km) | time (分钟)
 ```
+
+- `week_starts_on` 控制周统计、周视图和周 streak 使用的日历周，默认 `monday`（ISO 8601）。修改它会改变周统计的归类方式，不会改变活动本身的日期。历史周分组使用活动记录中的本地日期，不受查看者时区影响。classic 主题仍使用 ISO 周。
 
 > 隐私保护：设置下面环境变量：
 

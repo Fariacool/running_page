@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { WEEK_STARTS_ON } from '../config';
 import type { Activity } from '../types';
 import { formatDistance } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
+import { rotateWeekdays } from '../utils/week';
 
 interface CalendarWidgetProps {
   activities: Activity[];
@@ -64,7 +66,7 @@ export function CalendarWidget({
   }, [activities, year, monthIndex]);
   const monthActivities = [...byDay.values()].flat();
   const distance = monthActivities.reduce((sum, a) => sum + a.distance, 0);
-  const offset = (month.getDay() + 6) % 7;
+  const offset = (month.getDay() - WEEK_STARTS_ON + 7) % 7;
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const dayActivities = day === null ? [] : (byDay.get(day) ?? []);
   const moveMonth = (delta: number) => {
@@ -124,9 +126,11 @@ export function CalendarWidget({
         )}
       </div>
       <div className="mb-1 grid grid-cols-7 text-center text-xs text-[var(--color-muted)]">
-        {(zh
-          ? ['一', '二', '三', '四', '五', '六', '日']
-          : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        {rotateWeekdays(
+          zh
+            ? ['日', '一', '二', '三', '四', '五', '六']
+            : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+          WEEK_STARTS_ON
         ).map((label) => (
           <span key={label}>{label}</span>
         ))}

@@ -398,6 +398,7 @@ avatar: 'https://...'              # Profile avatar URL
 locale: zh                         # zh | en
 theme: dark                        # system | light | dark
 theme_preset: dashboard            # dashboard | classic | custom
+week_starts_on: monday             # monday | sunday | saturday | ...
 
 goals:
   Run:
@@ -406,6 +407,8 @@ goals:
     weekly: 35                     # Weekly distance target (km)
     unit: distance                 # distance (km) | time (minutes)
 ```
+
+- `week_starts_on` controls the calendar week used by weekly totals, the week view and week streaks. The default is `monday` (ISO 8601). Changing it changes how weekly statistics are counted; activity dates themselves are unchanged. Historical week grouping uses the recorded local date and is not affected by the viewer's timezone. The classic theme still uses ISO weeks.
 
 - To use Google Analytics, you need to modify the configuration in the `src/utils/analytics.ts` file (if present).
 

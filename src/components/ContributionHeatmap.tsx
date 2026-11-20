@@ -1,5 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react';
+import { WEEK_STARTS_ON } from '../config';
 import { exportCard } from '../utils/exportCard';
+import { rotateWeekdays } from '../utils/week';
 import type { Activity, SportFilter } from '../types';
 import {
   getAvailableYears,
@@ -145,7 +147,7 @@ function buildYearGrid(
   const maxVal = Math.max(...dayMap.values(), 1);
 
   const startDate = new Date(yr, 0, 1);
-  const startDay = startDate.getDay();
+  const startOffset = (startDate.getDay() - WEEK_STARTS_ON + 7) % 7;
   const grid: {
     date: string;
     distance: number;
@@ -163,7 +165,7 @@ function buildYearGrid(
 
   for (let d = 0; d < totalDays; d++) {
     const date = new Date(yr, 0, 1 + d);
-    const weekIdx = Math.floor((d + startDay) / 7);
+    const weekIdx = Math.floor((d + startOffset) / 7);
     while (grid.length <= weekIdx) grid.push([]);
     const key = `${yr}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const dayActs = dayActivitiesMap.get(key) || [];
@@ -252,10 +254,13 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
     ];
   }, [activities, selectedYear, allYears, isGym, isAll]);
 
-  const dayLabels =
+  const dayLabels = rotateWeekdays(
     locale === 'zh'
       ? ['', '一', '', '三', '', '五', '']
-      : ['', 'M', '', 'W', '', 'F', ''];
+      : ['', 'M', '', 'W', '', 'F', ''],
+    WEEK_STARTS_ON
+  );
+  const orderedWeekdayIds = rotateWeekdays(weekdayIds, WEEK_STARTS_ON);
 
   // Which display types are present this year
   const presentDisplayTypes = useMemo(() => {
@@ -574,7 +579,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
               <div className="mr-1 flex flex-col gap-[3px]">
                 {dayLabels.map((d, i) => (
                   <div
-                    key={weekdayIds[i]}
+                    key={orderedWeekdayIds[i]}
                     className="flex h-3 w-3 items-center justify-center text-[10px] text-[var(--color-muted)]"
                   >
                     {d}

@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { Activity } from '../types';
+import { WEEK_STARTS_ON } from '../config';
 import { useLocale } from '../hooks/useLocale';
 import { formatPace } from '../hooks/useActivities';
 import {
@@ -18,6 +19,7 @@ import {
   summaryChart,
   type SummaryPeriod,
 } from '../utils/summary';
+import { formatWeekLabel, rotateWeekdays, weekYear } from '../utils/week';
 
 const control =
   'rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-text)]';
@@ -29,18 +31,29 @@ const number = (value: number) =>
 function SummaryCard({
   activities,
   period,
+  periodKey,
   label,
   zh,
   onSelectActivity,
 }: {
   activities: Activity[];
   period: SummaryPeriod;
+  periodKey: string;
   label: string;
   zh: boolean;
   onSelectActivity: (a: Activity) => void;
 }) {
   const stats = summarize(activities);
-  const chart = summaryChart(activities, period, label);
+  const chart = summaryChart(activities, period, periodKey, WEEK_STARTS_ON);
+  const weekRange = rotateWeekdays(
+    zh
+      ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    WEEK_STARTS_ON
+  );
+  const weekRangeLabel = zh
+    ? `${weekRange[0]}至${weekRange[6]}`
+    : `${weekRange[0]}–${weekRange[6]}`;
   const metrics = [
     [zh ? '活动次数' : 'Activities', String(stats.count)],
     [
@@ -79,9 +92,7 @@ function SummaryCard({
           ? '月'
           : 'Month'
         : period === 'week'
-          ? zh
-            ? '周一至周日'
-            : 'Mon–Sun'
+          ? weekRangeLabel
           : period === 'day'
             ? zh
               ? '开始时间'
@@ -219,7 +230,8 @@ export function SummaryPage({
             (sport === 'all' || a.type === sport) &&
             (year === 'all' || summaryKeyYear(a, period) === year)
         ),
-        period
+        period,
+        WEEK_STARTS_ON
       ),
     [activities, sport, year, period]
   );
@@ -320,7 +332,10 @@ export function SummaryPage({
           {groups.slice(0, limit).map(([key, items]) => (
             <SummaryCard
               key={key}
-              label={key}
+              periodKey={key}
+              label={
+                period === 'week' ? formatWeekLabel(key, WEEK_STARTS_ON) : key
+              }
               activities={items}
               period={period}
               zh={zh}
@@ -341,9 +356,13 @@ export function SummaryPage({
 }
 
 function summaryKeyYear(activity: Activity, period: SummaryPeriod) {
-  // Weekly filters use the ISO week-year, including dates across New Year.
-  return summaryKey(
+  // Weekly filters use the week-year (the year containing the week's 4th day),
+  // so weeks spanning New Year are counted once and match ISO for Monday starts.
+  const key = summaryKey(
     activity.start_date_local,
-    period === 'week' ? 'week' : 'year'
-  ).slice(0, 4);
+    period === 'week' ? 'week' : 'year',
+    WEEK_STARTS_ON
+  );
+  if (!key) return '';
+  return period === 'week' ? String(weekYear(key)) : key.slice(0, 4);
 }

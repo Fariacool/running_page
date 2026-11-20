@@ -4,6 +4,7 @@
  */
 import rawConfig from '@config';
 import type { Locale } from './i18n';
+import { normalizeWeekStart, type WeekStart } from '../utils/week';
 
 export interface GoalConfig {
   yearly: number;
@@ -17,6 +18,7 @@ interface AppConfig {
   locale: Locale;
   theme: 'light' | 'dark' | 'system';
   theme_preset: string;
+  week_starts_on?: string | number;
   goals: Record<string, GoalConfig>;
   avatar?: string;
   mapbox_token?: string;
@@ -38,3 +40,14 @@ export const DEFAULT_GOAL: GoalConfig = GOALS.all ?? {
 export const AVATAR: string = config.avatar ?? '';
 export const MAPBOX_TOKEN: string =
   import.meta.env.VITE_MAPBOX_TOKEN || config.mapbox_token || '';
+
+const normalizedWeekStart = normalizeWeekStart(config.week_starts_on);
+export const WEEK_STARTS_ON: WeekStart = normalizedWeekStart ?? 1;
+
+if (config.week_starts_on !== undefined && normalizedWeekStart === null) {
+  console.warn(
+    `[config] Invalid week_starts_on value "${String(
+      config.week_starts_on
+    )}". Falling back to monday.`
+  );
+}
